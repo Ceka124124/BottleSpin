@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>🎲 Zar Oyunu</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+/* ══════ RESET & BASE ══════ */
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif;background:#0d0d1a;}
+
+/* ══════ APP SHELL ══════ */
+.app{
+  width:100%;max-width:430px;height:100dvh;
+  margin:0 auto;display:flex;flex-direction:column;
+  overflow:hidden;position:relative;
+  background:linear-gradient(180deg,#0f0f23 0%,#1a1030 50%,#0d1a0d 100%);
+}
+
+/* ══════ TOP BAR ══════ */
+.topbar{
+  height:50px;flex-shrink:0;display:flex;align-items:center;
+  justify-content:space-between;padding:0 12px;z-index:200;
+  background:rgba(255,255,255,.04);border-bottom:1px solid rgba(255,255,255,.07);
+  backdrop-filter:blur(10px);
+}
+.tb-logo{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:900;color:#fff;letter-spacing:.5px;}
+.tb-logo span{background:linear-gradient(135deg,#ff6b6b,#ffd700,#7bc67e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.tb-right{display:flex;align-items:center;gap:6px;}
+.conn-pill{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;padding:4px 10px;font-size:11px;font-weight:700;color:#aaa;
+}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#444;transition:all .3s;}
+.conn-dot.on{background:#6bcb77;box-shadow:0 0 8px #6bcb77;}
+.conn-dot.off{background:#ff4444;box-shadow:0 0 8px #ff4444;}
+.room-badge{
+  background:rgba(255,215,0,.12);border:1px solid rgba(255,215,0,.25);
+  border-radius:10px;padding:3px 9px;font-size:10px;font-weight:800;color:#ffd700;
+}
+
+/* ══════ GAME AREA ══════ */
+.game-area{
+  height:44dvh;flex-shrink:0;position:relative;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(20,80,20,.5) 0%, transparent 70%),
+    radial-gradient(ellipse at 50% 0%, rgba(80,20,80,.3) 0%, transparent 60%),
+    linear-gradient(180deg,#1a1030 0%,#0d1f0d 100%);
+}
+/* table surface */
+.table-surface{
+  position:absolute;bottom:0;left:0;right:0;height:65%;
+  background:radial-gradient(ellipse at 50% 80%, #1a3a1a 0%,#0d2010 60%, #080f08 100%);
+  border-radius:50% 50% 0 0 / 30% 30% 0 0;
+  box-shadow:inset 0 10px 40px rgba(0,0,0,.4), 0 -3px 20px rgba(100,200,100,.08);
+  border-top:1px solid rgba(100,200,100,.1);
+}
+.table-felt{
+  position:absolute;bottom:0;left:5%;right:5%;height:62%;
+  background:radial-gradient(ellipse at 50% 80%, rgba(50,120,50,.15) 0%, transparent 70%);
+  border-radius:50% 50% 0 0 / 20% 20% 0 0;
+}
+
+/* ── Players grid ── */
+.players-wrap{
+  position:absolute;inset:0;z-index:5;
+  padding:4px 6px 12px 6px;
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  gap:2px;
+  pointer-events:none;
+}
+.row-top,.row-bottom{
+  display:flex;justify-content:center;align-items:flex-end;
+  gap:4px;pointer-events:auto;flex-wrap:wrap;
+}
+.row-bottom{align-items:flex-start;}
+.row-middle{
+  display:flex;justify-content:space-between;align-items:center;
+  pointer-events:auto;
+}
+.row-middle-left,.row-middle-right{
+  display:flex;flex-direction:column;gap:3px;align-items:center;
+}
+
+/* player card */
+.pcard{
+  display:flex;flex-direction:column;align-items:center;
+  cursor:pointer;pointer-events:auto;position:relative;
+  transition:transform .2s;
+}
+.pcard:active{transform:scale(.92);}
+.av{
+  width:44px;height:44px;border-radius:10px;
+  border:2px solid rgba(255,255,255,.2);
+  overflow:hidden;background:rgba(0,0,0,.4);
+  display:flex;align-items:center;justify-content:center;
+  transition:all .3s;box-shadow:0 3px 10px rgba(0,0,0,.5);
+  position:relative;font-size:16px;font-weight:900;color:#fff;
+}
+.av.me{border-color:#ffd700;box-shadow:0 0 14px rgba(255,215,0,.5);}
+.av.my-turn-glow{
+  border-color:#7bc67e;
+  box-shadow:0 0 18px rgba(123,198,126,.8);
+  animation:mtglow .7s ease-in-out infinite alternate;
+}
+@keyframes mtglow{from{box-shadow:0 0 10px rgba(123,198,126,.4)}to{box-shadow:0 0 24px rgba(123,198,126,1)}}
+.av.target-glow{
+  border-color:#ff6b6b;
+  box-shadow:0 0 22px rgba(255,107,107,.9);
+  animation:tglow .45s ease-in-out infinite alternate;
+}
+@keyframes tglow{from{box-shadow:0 0 10px rgba(255,107,107,.5)}to{box-shadow:0 0 28px rgba(255,107,107,1)}}
+.pname{
+  font-size:8px;font-weight:800;margin-top:2px;
+  text-shadow:0 1px 4px rgba(0,0,0,.95);
+  max-width:50px;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;color:#fff;text-align:center;
+}
+.crown{position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:11px;}
+.turn-badge{
+  position:absolute;bottom:-8px;left:50%;transform:translateX(-50%);
+  font-size:7px;background:#7bc67e;color:#000;
+  border-radius:4px;padding:1px 4px;font-weight:900;white-space:nowrap;
+}
+
+/* ── DICE CENTER ── */
+.dice-center{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-58%);
+  z-index:20;display:flex;flex-direction:column;align-items:center;gap:6px;
+}
+.dice-glow{
+  position:absolute;width:100px;height:100px;border-radius:50%;
+  background:radial-gradient(circle,rgba(255,215,0,.15) 0%,transparent 70%);
+  top:50%;left:50%;transform:translate(-50%,-50%);
+  animation:dglow 3s ease-in-out infinite;pointer-events:none;
+}
+@keyframes dglow{0%,100%{opacity:.4;transform:translate(-50%,-50%) scale(1)}50%{opacity:.9;transform:translate(-50%,-50%) scale(1.6)}}
+
+.dice-row{display:flex;gap:10px;align-items:center;}
+
+/* 3D CSS Die */
+.die-scene{
+  width:42px;height:42px;
+  perspective:200px;cursor:pointer;
+}
+.die-scene.disabled{cursor:not-allowed;}
+.die{
+  width:42px;height:42px;position:relative;
+  transform-style:preserve-3d;
+  transition:transform 1.2s cubic-bezier(.175,.885,.32,1.275);
+  will-change:transform;
+}
+.die .face{
+  position:absolute;width:42px;height:42px;
+  background:linear-gradient(135deg,#fff 0%,#f0f0f0 100%);
+  border:1.5px solid rgba(200,200,200,.8);
+  border-radius:8px;display:grid;align-items:center;justify-items:center;
+  box-shadow:inset 0 1px 3px rgba(255,255,255,.9),inset 0 -1px 3px rgba(0,0,0,.1);
+}
+.die .face.f1{transform:rotateY(  0deg) translateZ(21px);}
+.die .face.f2{transform:rotateY( 90deg) translateZ(21px);}
+.die .face.f3{transform:rotateY(180deg) translateZ(21px);}
+.die .face.f4{transform:rotateY(-90deg) translateZ(21px);}
+.die .face.f5{transform:rotateX( 90deg) translateZ(21px);}
+.die .face.f6{transform:rotateX(-90deg) translateZ(21px);}
+
+/* die dots */
+.dots{display:grid;width:34px;height:34px;padding:3px;}
+.dot{
+  width:7px;height:7px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#333,#000);
+  box-shadow:0 1px 2px rgba(0,0,0,.3);
+  justify-self:center;align-self:center;
+}
+/* dot layouts */
+.d1{grid-template-columns:1fr;grid-template-rows:1fr;}
+.d2{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+.d2 .dot:nth-child(1){grid-column:1;grid-row:1;}
+.d2 .dot:nth-child(2){grid-column:2;grid-row:2;}
+.d3{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;}
+.d3 .dot:nth-child(1){grid-column:1;grid-row:1;}
+.d3 .dot:nth-child(2){grid-column:2;grid-row:2;}
+.d3 .dot:nth-child(3){grid-column:3;grid-row:3;}
+.d4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;}
+.d5{grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;}
+.d5 .dot:nth-child(1){grid-column:1;grid-row:1;}
+.d5 .dot:nth-child(2){grid-column:3;grid-row:1;}
+.d5 .dot:nth-child(3){grid-column:2;grid-row:2;}
+.d5 .dot:nth-child(4){grid-column:1;grid-row:3;}
+.d5 .dot:nth-child(5){grid-column:3;grid-row:3;}
+.d6{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr 1fr;}
+
+/* ── SPIN BUTTON ── */
+.spin-btn{
+  padding:9px 22px;border-radius:22px;border:none;
+  font-size:13px;font-weight:900;cursor:pointer;
+  background:linear-gradient(135deg,#ff6b6b,#ee2060);
+  color:#fff;box-shadow:0 6px 20px rgba(238,32,96,.45);
+  transition:all .15s;letter-spacing:.5px;
+  display:flex;align-items:center;gap:6px;
+}
+.spin-btn:active{transform:scale(.92);}
+.spin-btn.disabled{
+  background:linear-gradient(135deg,#555,#333);
+  box-shadow:none;cursor:not-allowed;opacity:.6;
+}
+.spin-btn.my-turn-pulse{
+  animation:spulse 1s ease-in-out infinite alternate;
+}
+@keyframes spulse{from{box-shadow:0 6px 20px rgba(238,32,96,.3)}to{box-shadow:0 8px 30px rgba(238,32,96,.8)}}
+
+/* turn indicator */
+.turn-label{
+  position:absolute;bottom:8px;left:50%;transform:translateX(-50%);
+  font-size:10px;font-weight:800;color:#fff;
+  background:rgba(0,0,0,.7);padding:3px 10px;border-radius:10px;
+  white-space:nowrap;z-index:25;border:1px solid rgba(255,255,255,.12);
+  pointer-events:none;transition:background .3s;
+}
+.turn-label.active{background:rgba(123,198,126,.6);border-color:rgba(123,198,126,.4);}
+
+/* result banner */
+.result-banner{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  background:rgba(0,0,0,.82);backdrop-filter:blur(6px);
+  z-index:30;display:none;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  animation:ovIn .25s;
+}
+.result-banner.show{display:flex;}
+@keyframes ovIn{from{opacity:0}to{opacity:1}}
+.rb-type{
+  font-size:30px;font-weight:900;
+  background:linear-gradient(135deg,#ff6b6b,#ffd700);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+}
+.rb-truth{background:linear-gradient(135deg,#6ec6ff,#7bc67e);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.rb-line{font-size:13px;color:#ddd;font-weight:600;text-align:center;padding:0 20px;line-height:1.4;}
+.rb-players{display:flex;align-items:center;gap:12px;margin:4px 0;}
+.rb-av{
+  width:48px;height:48px;border-radius:12px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:900;color:#fff;border:2px solid rgba(255,255,255,.3);
+}
+.rb-arrow{font-size:22px;color:#ffd700;animation:arrowBounce .7s ease-in-out infinite alternate;}
+@keyframes arrowBounce{from{transform:translateX(-3px)}to{transform:translateX(3px)}}
+.rb-dice{display:flex;gap:10px;font-size:28px;}
+.rb-close{
+  padding:8px 28px;border-radius:18px;border:none;
+  background:linear-gradient(135deg,#7bc67e,#4caf50);
+  color:#fff;font-size:13px;font-weight:900;cursor:pointer;
+  box-shadow:0 4px 16px rgba(76,175,80,.4);margin-top:4px;
+}
+.rb-close:active{transform:scale(.93);}
+
+/* ══════ CHAT ══════ */
+.chat-section{
+  flex:1;display:flex;flex-direction:column;
+  background:#f5f5f7;overflow:hidden;
+  border-radius:16px 16px 0 0;margin-top:-6px;
+  box-shadow:0 -8px 24px rgba(0,0,0,.25);min-height:0;
+}
+.chat-head{
+  height:32px;flex-shrink:0;display:flex;align-items:center;
+  padding:0 12px;gap:6px;
+  background:linear-gradient(135deg,#1a1030,#0f1a1f);
+  border-radius:16px 16px 0 0;
+}
+.chat-head-dot{width:6px;height:6px;border-radius:50%;}
+.emoji-bar{
+  display:flex;gap:4px;padding:5px 10px;
+  background:#fff;border-bottom:1px solid #eee;
+  overflow-x:auto;flex-shrink:0;
+}
+.emoji-bar::-webkit-scrollbar{display:none;}
+.ebtn{
+  padding:3px 8px;border-radius:12px;background:#f2f2f2;
+  border:none;font-size:14px;cursor:pointer;flex-shrink:0;
+  transition:all .12s;
+}
+.ebtn:active{transform:scale(.82);background:#e0e0e0;}
+.chat-msgs{
+  flex:1;overflow-y:auto;padding:4px 0;
+  display:flex;flex-direction:column;gap:0;min-height:0;
+}
+.chat-msgs::-webkit-scrollbar{width:2px;}
+.chat-msgs::-webkit-scrollbar-thumb{background:#ddd;border-radius:2px;}
+.msg{padding:4px 10px;display:flex;gap:7px;animation:msgIn .18s ease;}
+@keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.mavt{
+  width:28px;height:28px;border-radius:7px;overflow:hidden;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:900;color:#fff;
+}
+.mcontent{flex:1;}
+.mname{font-size:9px;font-weight:800;margin-bottom:1px;}
+.mtext{font-size:12px;color:#222;line-height:1.35;word-break:break-word;}
+.sys-row{display:flex;justify-content:center;padding:2px 10px;}
+.sys-bubble{
+  background:rgba(100,160,100,.1);border:1px solid rgba(100,160,100,.2);
+  border-radius:8px;padding:3px 10px;font-size:10px;color:#556;font-weight:500;
+  text-align:center;
+}
+.input-bar{
+  display:flex;align-items:center;padding:6px 10px;
+  background:#fff;border-top:1px solid #eee;gap:6px;flex-shrink:0;
+}
+.chat-inp{
+  flex:1;border:none;font-size:13px;outline:none;
+  color:#333;background:#f0f0f0;padding:7px 12px;border-radius:16px;
+}
+.send-btn{
+  width:34px;height:34px;border-radius:50%;
+  background:linear-gradient(135deg,#ff6b6b,#ee2060);
+  color:#fff;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;border:none;font-size:13px;flex-shrink:0;
+  box-shadow:0 3px 10px rgba(238,32,96,.35);transition:transform .12s;
+}
+.send-btn:active{transform:scale(.88);}
+
+/* ══════ TOAST ══════ */
+.toast{
+  position:fixed;top:58px;left:50%;transform:translateX(-50%);
+  background:rgba(15,15,30,.94);color:#fff;
+  padding:8px 18px;border-radius:18px;
+  font-size:12px;font-weight:700;z-index:3000;
+  white-space:nowrap;pointer-events:none;
+  opacity:0;transition:opacity .25s;
+  border:1px solid rgba(255,255,255,.1);
+  max-width:320px;text-align:center;
+}
+.toast.show{opacity:1;}
+
+/* ══════ JOIN SCREEN ══════ */
+.join-screen{
+  position:fixed;inset:0;z-index:1000;
+  background:linear-gradient(135deg,#0d0d1a 0%,#1a0d2e 50%,#0d1a0d 100%);
+  display:flex;align-items:center;justify-content:center;
+  animation:ovIn .3s;
+}
+.join-card{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:24px;padding:32px 28px;
+  width:calc(100% - 40px);max-width:360px;
+  text-align:center;backdrop-filter:blur(20px);
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.join-title{
+  font-size:28px;font-weight:900;color:#fff;margin-bottom:4px;
+}
+.join-sub{font-size:13px;color:#888;margin-bottom:24px;}
+.join-dice-row{font-size:48px;margin-bottom:20px;animation:diceBounce 2s ease-in-out infinite;}
+@keyframes diceBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.join-name-row{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;padding:10px 14px;margin-bottom:16px;
+}
+.join-name-row i{color:#888;font-size:14px;}
+.join-inp{
+  flex:1;background:none;border:none;outline:none;
+  font-size:15px;font-weight:700;color:#fff;
+}
+.join-inp::placeholder{color:#555;}
+.join-btn{
+  width:100%;padding:14px;border-radius:16px;border:none;
+  background:linear-gradient(135deg,#ff6b6b,#ee2060);
+  color:#fff;font-size:16px;font-weight:900;cursor:pointer;
+  box-shadow:0 6px 24px rgba(238,32,96,.4);
+  transition:all .15s;letter-spacing:.5px;
+}
+.join-btn:active{transform:scale(.96);}
+.join-hint{font-size:11px;color:#555;margin-top:10px;}
+
+/* truth/dare pill */
+.challenge-pill{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:3px 10px;border-radius:12px;font-size:11px;font-weight:800;
+  margin-bottom:4px;
+}
+.cp-truth{background:rgba(110,198,255,.15);border:1px solid rgba(110,198,255,.3);color:#6ec6ff;}
+.cp-dare {background:rgba(255,107,107,.15);border:1px solid rgba(255,107,107,.3);color:#ff6b6b;}
+</style>
+</head>
+<body>
+
+<!-- ══ JOIN SCREEN ══ -->
+<div class="join-screen" id="joinScreen">
+  <div class="join-card">
+    <div class="join-dice-row">🎲🎲</div>
+    <div class="join-title">Zar Oyunu</div>
+    <div class="join-sub">Doğruluq · Cəsarət · Zar</div>
+    <div class="join-name-row">
+      <i class="fa-solid fa-user"></i>
+      <input class="join-inp" id="nameInp" placeholder="Adınızı daxil edin..." maxlength="24" autocomplete="off">
+    </div>
+    <button class="join-btn" onclick="doJoin()"><i class="fa-solid fa-dice"></i> Oyuna Qoşul</button>
+    <div class="join-hint">URL: ?isim=Maya şəklində ad daxil edə bilərsiniz</div>
+  </div>
+</div>
+
+<!-- ══ MAIN APP ══ -->
+<div class="app" id="mainApp" style="display:none;">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="tb-logo">🎲 <span>ZAR OYUNU</span></div>
+    <div class="tb-right">
+      <div class="room-badge" id="roomBadge">Masa —</div>
+      <div class="conn-pill">
+        <div class="conn-dot" id="connDot"></div>
+        <span id="connLabel">Qoşulur</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME AREA -->
+  <div class="game-area" id="gameArea">
+    <div class="table-surface"></div>
+    <div class="table-felt"></div>
+
+    <!-- Players -->
+    <div class="players-wrap" id="playersWrap">
+      <div class="row-top"         id="rowTop"></div>
+      <div class="row-middle"      id="rowMiddle">
+        <div class="row-middle-left"  id="rowMidLeft"></div>
+        <div class="row-middle-right" id="rowMidRight"></div>
+      </div>
+      <div class="row-bottom"      id="rowBottom"></div>
+    </div>
+
+    <!-- 3D Dice -->
+    <div class="dice-center">
+      <div class="dice-glow"></div>
+      <div class="dice-row">
+        <div class="die-scene disabled" id="dieScene1">
+          <div class="die" id="die1">
+            <div class="face f1"><div class="dots d1"><div class="dot"></div></div></div>
+            <div class="face f2"><div class="dots d2"><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f3"><div class="dots d3"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f4"><div class="dots d4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f5"><div class="dots d5"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f6"><div class="dots d6"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          </div>
+        </div>
+        <div class="die-scene disabled" id="dieScene2">
+          <div class="die" id="die2">
+            <div class="face f1"><div class="dots d1"><div class="dot"></div></div></div>
+            <div class="face f2"><div class="dots d2"><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f3"><div class="dots d3"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f4"><div class="dots d4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f5"><div class="dots d5"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+            <div class="face f6"><div class="dots d6"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>
+          </div>
+        </div>
+      </div>
+      <button class="spin-btn disabled" id="spinBtn" onclick="doSpin()">
+        <i class="fa-solid fa-dice"></i> ZARI AT
+      </button>
+    </div>
+
+    <!-- Turn label -->
+    <div class="turn-label" id="turnLabel">⏳ Qoşulur...</div>
+
+    <!-- Result banner (shown after roll) -->
+    <div class="result-banner" id="resultBanner">
+      <div class="rb-dice" id="rbDice">🎲🎲</div>
+      <div id="rbTypePill"></div>
+      <div class="rb-players" id="rbPlayers"></div>
+      <div class="rb-line" id="rbLine"></div>
+      <button class="rb-close" id="rbCloseBtn" onclick="closeResult()" style="display:none;">
+        ✅ Bildim / Etdim
+      </button>
+    </div>
+  </div>
+
+  <!-- CHAT -->
+  <div class="chat-section">
+    <div class="chat-head">
+      <div class="chat-head-dot" style="background:#ff6b6b;"></div>
+      <div class="chat-head-dot" style="background:#ffd700;"></div>
+      <div class="chat-head-dot" style="background:#7bc67e;"></div>
+    </div>
+    <div class="emoji-bar">
+      <button class="ebtn" onclick="quickEmoji('😂')">😂</button>
+      <button class="ebtn" onclick="quickEmoji('🔥')">🔥</button>
+      <button class="ebtn" onclick="quickEmoji('😍')">😍</button>
+      <button class="ebtn" onclick="quickEmoji('🎲')">🎲</button>
+      <button class="ebtn" onclick="quickEmoji('😮')">😮</button>
+      <button class="ebtn" onclick="quickEmoji('💀')">💀</button>
+      <button class="ebtn" onclick="quickEmoji('👀')">👀</button>
+      <button class="ebtn" onclick="quickEmoji('🤭')">🤭</button>
+      <button class="ebtn" onclick="quickEmoji('🫣')">🫣</button>
+      <button class="ebtn" onclick="quickEmoji('🎉')">🎉</button>
+    </div>
+    <div class="chat-msgs" id="chatMsgs">
+      <div class="sys-row"><div class="sys-bubble">🎲 Zar Oyununa Xoş Gəldiniz!</div></div>
+    </div>
+    <div class="input-bar">
+      <input class="chat-inp" id="chatInp" placeholder="Mesaj yaz..." maxlength="300" autocomplete="off">
+      <button class="send-btn" onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Socket.IO -->
+<script src="/socket.io/socket.io.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   CONFIG & STATE
+══════════════════════════════════════════ */
+// Read ?isim= or ?name= from URL
+const urlParams = new URLSearchParams(location.search);
+const urlName   = urlParams.get('isim') || urlParams.get('name') || '';
+
+let ME        = null; // my player object
+let roomId    = null;
+let myTurn    = false;
+let spinning  = false;
+let players   = [];
+const seenIds = new Set();
+
+/* Die face rotations (X, Y degrees) */
+const FACE_ROTS = {
+  1: { x:  0, y:   0 },
+  2: { x:  0, y: -90 },
+  3: { x:  0, y: 180 },
+  4: { x:  0, y:  90 },
+  5: { x: 90, y:   0 },
+  6: { x:-90, y:   0 },
+};
+
+/* Extra full-spin amounts so die looks like it really tumbled */
+let die1Spins = { x: 0, y: 0 };
+let die2Spins = { x: 0, y: 0 };
+
+const TRUTHS = [
+  "Ən çox kimə aşiq olmusan?",
+  "Həyatında ən böyük sirrini söylə.",
+  "Sosial medianda heç başqasının adından yazıbsan?",
+  "Son dəfə yalan danışdığın an nə idi?",
+  "Ən çox nəyi gizlidirsən?",
+  "Ən utanc verici anın nə idi?",
+  "İndi buradakı biri haqqında nə düşünürsən?",
+  "Ən böyük qorxun nədir?",
+  "Heç oğurluq etmisən?",
+  "Ən sevmədiyini kimlə ən çox vaxt keçirirsən?",
+  "Son sevgilinin ismi nədir?",
+  "Heç yuxuda kimdən gördün?",
+  "Nə üçün ən çox peşmançılıq duyursan?",
+  "İndi burada kimi sevdiyini düşünürsən?",
+  "Ən dəli anın nəydi?",
+];
+
+const DARES = [
+  "Otaqdakı ən yaşlı insana kompliment de!",
+  "Özünün utanc verici bir şeyini danış.",
+  "30 saniyəlik maraqlı bir rəqs et!",
+  "Telefondakı son 3 mesajını oxu.",
+  "Birini seç, ona ən gözəl şeyi söylə.",
+  "Üzündə 60 saniyə gülümsəyərək qal.",
+  "Öz başına bir şeir de!",
+  "Otaqdakı birini 10 saniyə boyunca üzünə bax.",
+  "\"Mən ən əyləncəli insanam!\" deyərək zəng aç.",
+  "Profilinə 1 dəqiqəlik qəribə bir foto qoy.",
+  "Sevdiyin biri haqqında 3 doğru, 1 yalan söylə.",
+  "Bərkdən bir nəğmə oxu!",
+  "Özünün 10 il sonrakı halını canlandır.",
+  "Sağ əlinlə burnunuzu, sol əlinlə qulağınızı tut.",
+  "Otaqdakı birini tapmaca ilə güldür.",
+];
+
+/* ══════════════════════════════════════════
+   JOIN SCREEN
+══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  const ni = document.getElementById('nameInp');
+  if (urlName) {
+    ni.value = urlName;
+    // Auto-join after brief delay for UX
+    setTimeout(doJoin, 400);
+  }
+  ni.addEventListener('keypress', e => {
+    if (e.key === 'Enter') doJoin();
+  });
+});
+
+function doJoin() {
+  const name = document.getElementById('nameInp').value.trim() || urlName || 'Oyuncu';
+  if (!name) { showT('⚠️ Adınızı daxil edin!'); return; }
+  document.getElementById('joinScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display    = 'flex';
+  initSocket(name);
+}
+
+/* ══════════════════════════════════════════
+   SOCKET
+══════════════════════════════════════════ */
+let socket;
+
+function initSocket(name) {
+  socket = io({ transports: ['websocket', 'polling'] });
+
+  socket.on('connect', () => {
+    setConn(true);
+    socket.emit('join', { name }, (res) => {
+      if (!res?.ok) { showT('❌ Qoşulma xətası'); return; }
+      roomId = res.roomId;
+      ME     = { id: socket.id, name, color: res.color, slot: res.slot };
+      document.getElementById('roomBadge').textContent = 'Masa ' + roomId;
+      showT('✅ Masa ' + roomId + ' — Qoşuldunuz!');
+    });
+    // Restore chat history
+    socket.emit('history', [], () => {});
+  });
+
+  socket.on('disconnect', () => {
+    setConn(false);
+    showT('🔴 Əlaqə kəsildi...');
+  });
+
+  socket.on('state', (data) => {
+    players = data.players || [];
+    roomId  = data.roomId  || roomId;
+    renderPlayers(players);
+    updateTurnUI(data);
+  });
+
+  socket.on('history', (msgs) => {
+    msgs.forEach(m => appendMsg(m));
+  });
+
+  socket.on('new_msg', (msg) => {
+    appendMsg(msg);
+  });
+
+  socket.on('spin', (data) => {
+    handleSpinEvent(data);
+  });
+}
+
+function setConn(on) {
+  document.getElementById('connDot').className   = 'conn-dot ' + (on ? 'on' : 'off');
+  document.getElementById('connLabel').textContent = on ? 'Bağlı' : 'Kəsildi';
+}
+
+/* ══════════════════════════════════════════
+   PLAYERS RENDER
+══════════════════════════════════════════ */
+function renderPlayers(list) {
+  // Up to 12: top row 4, mid-left 2, mid-right 2, bottom 4
+  const top   = list.slice(0, 4);
+  const midL  = list.slice(4, 6);
+  const midR  = list.slice(6, 8);
+  const bot   = list.slice(8, 12);
+
+  const mkCard = (p) => {
+    const isMe       = p.id === (socket?.id);
+    const isTarget   = p._target;
+    const isTurn     = p._isTurn;
+    let cls = 'av';
+    if (isMe)     cls += ' me';
+    if (isTarget) cls += ' target-glow';
+    if (isTurn && !isTarget) cls += ' my-turn-glow';
+
+    return `<div class="pcard">
+      ${isMe ? '<div class="crown">👑</div>' : ''}
+      <div class="${cls}" id="pav_${p.slot}"
+           style="background:linear-gradient(135deg,${p.color}aa,${p.color}55);">
+        ${p.avatar || p.name?.charAt(0) || '?'}
+      </div>
+      <div class="pname">${esc(p.name || '?')}</div>
+      ${isTurn ? '<div class="turn-badge">🎲 Sıra</div>' : ''}
+    </div>`;
+  };
+
+  document.getElementById('rowTop').innerHTML      = top.map(mkCard).join('');
+  document.getElementById('rowMidLeft').innerHTML  = midL.map(mkCard).join('');
+  document.getElementById('rowMidRight').innerHTML = midR.map(mkCard).join('');
+  document.getElementById('rowBottom').innerHTML   = bot.map(mkCard).join('');
+}
+
+function updateTurnUI(data) {
+  const currId = data.currentTurn;
+  const list   = data.players || [];
+  myTurn = (currId === socket?.id) && !data.spinning;
+
+  // Mark isTurn on players
+  list.forEach(p => p._isTurn = (p.id === currId));
+  renderPlayers(list);
+
+  const lbl = document.getElementById('turnLabel');
+  const btn = document.getElementById('spinBtn');
+
+  if (data.spinning) {
+    lbl.textContent = '🌀 Fırlanır...';
+    lbl.className   = 'turn-label';
+    btn.className   = 'spin-btn disabled';
+    btn.disabled    = true;
+    spinning        = true;
+  } else if (myTurn) {
+    lbl.textContent = '🎯 SİZİN SIRANIZ — ZARI ATIN!';
+    lbl.className   = 'turn-label active';
+    btn.className   = 'spin-btn my-turn-pulse';
+    btn.disabled    = false;
+    spinning        = false;
+  } else {
+    const tp = list.find(p => p.id === currId);
+    lbl.textContent = tp ? `👉 ${tp.name}'nin sırası` : '⏳ Gözləyin...';
+    lbl.className   = 'turn-label';
+    btn.className   = 'spin-btn disabled';
+    btn.disabled    = true;
+    spinning        = false;
+  }
+
+  // Enable/disable die scenes
+  document.getElementById('dieScene1').className = myTurn ? 'die-scene' : 'die-scene disabled';
+  document.getElementById('dieScene2').className = myTurn ? 'die-scene' : 'die-scene disabled';
+}
+
+/* ══════════════════════════════════════════
+   SPIN LOGIC
+══════════════════════════════════════════ */
+function doSpin() {
+  if (!myTurn || spinning) {
+    if (!myTurn) showT('⚠️ Sizin növbəniz deyil!');
+    return;
+  }
+  socket.emit('spin', {}, (res) => {
+    if (res && !res.ok) showT('⚠️ ' + (res.e || 'Xəta'));
+  });
+}
+
+function handleSpinEvent(data) {
+  spinning = true;
+  // Animate both dice
+  animateDie('die1', data.die1);
+  animateDie('die2', data.die2);
+
+  // After animation show result
+  setTimeout(() => {
+    showResult(data);
+  }, 1350);
+}
+
+function animateDie(dieId, value) {
+  const el    = document.getElementById(dieId);
+  const isD1  = dieId === 'die1';
+  const spins = isD1 ? die1Spins : die2Spins;
+
+  // Add random full rotations so it tumbles
+  const extraX = (Math.floor(Math.random() * 4) + 3) * 360;
+  const extraY = (Math.floor(Math.random() * 4) + 3) * 360;
+
+  const target   = FACE_ROTS[value];
+  spins.x        = extraX + target.x;
+  spins.y        = extraY + target.y;
+
+  el.style.transition = 'transform 1.1s cubic-bezier(.175,.885,.32,1.275)';
+  el.style.transform  = `rotateX(${spins.x}deg) rotateY(${spins.y}deg)`;
+}
+
+/* ══════════════════════════════════════════
+   RESULT BANNER
+══════════════════════════════════════════ */
+function showResult(data) {
+  const { die1, die2, total, spinner, target, challengeType } = data;
+
+  // Dice display
+  const dieFaces = ['', '⚀','⚁','⚂','⚃','⚄','⚅'];
+  document.getElementById('rbDice').textContent = (dieFaces[die1]||die1) + ' ' + (dieFaces[die2]||die2) + ' = ' + total;
+
+  // Type pill
+  const pill = document.getElementById('rbTypePill');
+  if (challengeType === 'truth') {
+    pill.innerHTML = '<div class="challenge-pill cp-truth">🔍 DOĞRULUQ</div>';
+  } else {
+    pill.innerHTML = '<div class="challenge-pill cp-dare">🔥 CƏSARƏT</div>';
+  }
+
+  // Players row
+  const pRow  = document.getElementById('rbPlayers');
+  const mkAv  = (p) => `<div class="rb-av" style="background:linear-gradient(135deg,${p.color}cc,${p.color}66);">${p.avatar || p.name?.charAt(0) || '?'}</div>`;
+  pRow.innerHTML = `
+    ${mkAv(spinner)}
+    <div class="rb-arrow">→</div>
+    ${mkAv(target)}
+  `;
+
+  // Challenge line
+  const pool    = challengeType === 'truth' ? TRUTHS : DARES;
+  const challenge = pool[total % pool.length] || pool[0];
+  document.getElementById('rbLine').innerHTML =
+    `<strong>${esc(target.name)}</strong> üçün:<br>"${esc(challenge)}"`;
+
+  // Show close only to spinner
+  const closeBtn = document.getElementById('rbCloseBtn');
+  if (spinner.id === socket?.id) {
+    closeBtn.style.display = 'block';
+  } else {
+    closeBtn.style.display = 'none';
+    // Auto-close for non-spinners after 8 s
+    setTimeout(() => closeResult(), 8000);
+  }
+
+  // Highlight target
+  players.forEach(p => p._target = (p.id === target.id));
+  renderPlayers(players);
+
+  document.getElementById('resultBanner').classList.add('show');
+}
+
+function closeResult() {
+  document.getElementById('resultBanner').classList.remove('show');
+  players.forEach(p => p._target = false);
+  renderPlayers(players);
+}
+
+/* ══════════════════════════════════════════
+   CHAT
+══════════════════════════════════════════ */
+function sendMsg() {
+  const inp = document.getElementById('chatInp');
+  const txt = inp.value.trim();
+  if (!txt) return;
+  inp.value = '';
+  socket?.emit('msg', { text: txt });
+}
+
+function quickEmoji(e) {
+  document.getElementById('chatInp').value += e;
+  document.getElementById('chatInp').focus();
+}
+
+function appendMsg(m) {
+  const uid = m.id || m.created_at;
+  if (uid && seenIds.has(uid)) return;
+  if (uid) seenIds.add(uid);
+
+  const c   = document.getElementById('chatMsgs');
+  const div = document.createElement('div');
+
+  if (m.type === 'system') {
+    div.className = 'sys-row';
+    div.innerHTML = `<div class="sys-bubble">${esc(m.body)}</div>`;
+  } else {
+    div.className = 'msg';
+    const bg = m.color || '#667eea';
+    div.innerHTML = `
+      <div class="mavt" style="background:linear-gradient(135deg,${bg},${bg}88);">${esc((m.name||'?').charAt(0))}</div>
+      <div class="mcontent">
+        <div class="mname" style="color:${bg}">${esc(m.name||'?')}</div>
+        <div class="mtext">${esc(m.body)}</div>
+      </div>`;
+  }
+  c.appendChild(div);
+  c.scrollTop = c.scrollHeight;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('chatInp').addEventListener('keypress', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMsg(); }
+  });
+});
+
+/* ══════════════════════════════════════════
+   UTILS
+══════════════════════════════════════════ */
+let toastT;
+function showT(msg, dur = 2800) {
+  const t = document.getElementById('toast');
+  clearTimeout(toastT);
+  t.textContent = msg;
+  t.classList.add('show');
+  toastT = setTimeout(() => t.classList.remove('show'), dur);
+}
+
+function esc(s) {
+  if (!s) return '';
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+</script>
+</body>
+</html>
