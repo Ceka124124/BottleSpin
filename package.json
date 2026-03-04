@@ -1,7 +1,7 @@
 {
   "name": "sise-cevirme-server",
-  "version": "1.0.0",
-  "description": "Şişə Çevirme — Real-time bottle spin game server",
+  "version": "2.0.0",
+  "description": "🎲 Zar Oyunu — Real-time Doğruluq & Cəsarət",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
